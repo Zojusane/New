@@ -1,0 +1,358 @@
+#include <TimeLib.h>
+#include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
+#include <Wire.h>
+#include <U8g2lib.h>
+#include <Arduino.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include <FS.h>
+#include <ArduinoJson.h>
+#include <EEPROM.h>
+//---------------修改此处""内的信息---------------------------------------------
+const char ssid[] = "TP-LINK_406F";                       //WiFi名
+const char pass[] = "15216039360";                   //WiFi密码
+static const char ntpServerName[] = "ntp.sjtu.edu.cn"; //NTP服务器，上海交通大学
+const int timeZone = 8;                                //时区，北京时间为+8
+//-----------------------------------------------------------------------------
+ESP8266WebServer server(80);
+WiFiUDP Udp;
+U8G2_SSD1306_128X64_NONAME_F_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);
+unsigned int localPort = 8888; // 用于侦听UDP数据包的本地端口
+time_t getNtpTime();
+void sendNTPpacket(IPAddress &address);
+void oledClockDisplay();
+void sendCommand(int command, int value);
+void initdisplay();
+void alarm();
+void eepromwrite();
+void eepromread();
+boolean isNTPConnected = false;
+//String medicine[5] = {"999cold medincine", "double yellow medicine", "", "", ""};
+//String dosage[5] = {"onepacket", "onepacket", "", "", ""};
+//int hhour[5] = {11, 11, 60, 60, 60};
+//int mminute[5] = {11, 10, 60, 60, 60};
+String medicine[5]={"","","","",""};
+String dosage[5]={"","","","",""};
+int hhour[5];
+int mminute[5];
+int sum;
+char temp[5]={"0/"};
+char tempp[5]={"//"};
+void hhandle() {
+  if (server.arg(0) == "1")
+  {
+    int fulladdflag=1;
+    for (int i = 0; i < 5; i++)
+      if (hhour[i] == 60) {
+        fulladdflag=0;
+        medicine[i] = "" + server.arg(1) + "";
+        dosage[i] = "" + server.arg(2) + "";
+        hhour[i] = atoi((char*)server.arg(3).c_str());
+        mminute[i] = atoi((char*)server.arg(4).c_str());  
+        eepromwrite();
+        break;
+      }
+      if (fulladdflag==0)
+    server.send(200, "text/html", "<p>add successfully</p><br><a href=\"/select\">back</a>");
+    else
+    server.send(200, "text/html", "<p>add failed coz only five messages can be stored</p><br><a href=\"/select\">back to delete one</a>");
+  }
+  else if (server.arg(0) == "2")
+  {
+    
+    int i = atoi((char*)server.arg(1).c_str());
+    if (hhour[i - 1]==60)
+    server.send(200, "text/html","<p>nothing to delete</p><br><a href=\"/select\">back to choose new one</a>");
+    else{
+    hhour[i - 1] = 60;
+    mminute[i - 1] = 60;
+    medicine[i - 1] = "null";
+    dosage[i - 1] = "null";
+    eepromwrite();
+    server.send(200, "text/html","<p>delete successfully</p><br><a href=\"/select\">back</a>");
+    }
+  }
+  else if (server.arg(0) == "3")
+  {
+    int i = atoi((char*)server.arg(1).c_str());
+    medicine[i - 1] = "" + server.arg(2) + "";
+    dosage[i - 1] = "" + server.arg(3) + "";
+    hhour[i - 1] = atoi((char*)server.arg(4).c_str());
+    mminute[i - 1] = atoi((char*)server.arg(5).c_str()); 
+    eepromwrite();
+     server.send(200, "text/html", "<p>altersuccessfully</p><br><a href=\"/select\">back</a>");
+    
+  }
+  
+}
+void all() {
+  DynamicJsonDocument pat(1024);
+  JsonArray medi = pat.createNestedArray("medi");
+  JsonArray dos = pat.createNestedArray("dos");
+  JsonArray hho = pat.createNestedArray("hho");
+  JsonArray mmi = pat.createNestedArray("mmi");
+  String output;
+  for (int i = 0; i < 5; i++) {
+    if (hhour[i] != 60) {
+      medi.add(medicine[i]);
+      dos.add(dosage[i]);
+      hho.add(hhour[i]);
+      mmi.add(mminute[i]);
+    }
+    else{
+          medi.add("");
+      dos.add("");
+      hho.add("");
+      mmi.add("");
+    }
+  }
+  serializeJson(pat, output);
+  output = "dataJSON(" + output + ")";
+  server.send(200, "application/json", output);
+  pat.clear();
+}
+void select() {
+  File myFile;
+  myFile = SPIFFS.open("sel.html", "w+");
+  myFile.println("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>服药提醒-界面</title></head><body><script>function dataJSON(data) {var tb = document.getElementById('pat');for (var i = 0; i < data.hho.length; i++) {tb.rows[i + 1].cells[1].innerHTML = data.medi[i];tb.rows[i + 1].cells[2].innerHTML = data.dos[i];tb.rows[i + 1].cells[3].innerHTML = data.hho[i];tb.rows[i + 1].cells[4].innerHTML = data.mmi[i];}}function alter() {var i=document.getElementById('number2').value;var tb = document.getElementById('pat');document.getElementById('medicine').value=tb.rows[i].cells[1].innerHTML;document.getElementById('dosage').value=tb.rows[i].cells[2].innerHTML;document.getElementById('hour').value=tb.rows[i].cells[3].innerHTML;document.getElementById('minute').value=tb.rows[i].cells[4].innerHTML;}</script><h2>病人的服药信息</h2><table id=\"pat\" border=\"1\"><tr><td>id</td><td>药品名称</td><td>剂量</td><td>吃药：时</td><td>吃药：分</td></tr><tr><td>1</td><td></td><td></td><td></td><td></td></tr><tr><td>2</td><td></td><td></td><td></td><td></td></tr><tr><td>3</td><td></td><td></td><td></td><td></td></tr><tr><td>4</td><td></td><td></td><td></td><td></td></tr><tr><td>5</td><td></td><td></td><td></td><td></td></tr></table><script type=\"text/javascript\" src=\"./all?cb=dataJSON\"></script><br><h2>添加服药信息</h2><br><form method=\"post\"  action=\"/handle?id=1\">药物名称：<input type=\"text\" name=\"hello\"><br>剂量:<input type=\"text\" name=\"hell\"><br>吃药：时<input type=\"text\" name=\"hel\"><br>吃药：分<input type=\"text\" name=\"he\"><br><input type=\"submit\" value=\"Submit\"></form><h2>删除服药信息</h2><br><form method=\"post\" action=\"/handle?id=2\">删除第<input type=\"text\" name=\"number\">项<br><input type=\"submit\" value=\"删除\"></form><br><h2>修改服药信息</h2><form method=\"post\" action=\"/handle?id=3\">修改第<input type=\"text\" id=\"number2\" name=\"number2\">项<br><input type=\"button\" value=\"请求修改\" onclick=\"alter()\"><br>药物名称：<input type=\"text\" id=\"medicine\" name=\"medicine\"><br>剂量:<input type=\"text\" id=\"dosage\" name=\"dosage\"><br>吃药：时<input type=\"text\" id=\"hour\" name=\"hour\"><br>吃药：分<input type=\"text\" id=\"minute\" name=\"minute\"><br><input type=\"submit\" value=\"确认修改\"></form></body></html>");
+  myFile.close();
+  myFile = SPIFFS.open("sel.html", "r");
+  server.streamFile(myFile, "text/html");
+  myFile.close();
+}
+void setup()
+{
+  SPIFFS.begin();
+  SPIFFS.format();
+  Serial.begin(115200);
+  EEPROM.begin(1024);
+  while (!Serial)
+    continue;
+   eepromread();
+  pinMode(0, OUTPUT);
+  digitalWrite(0, LOW);
+  Serial.println("NTP Clock");
+  initdisplay();
+  Serial.print("Connecting WiFi...");
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, pass);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected");
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.setCursor(0, 14);
+  u8g2.print("Ready");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+  Serial.println("Starting UDP");
+  Udp.begin(localPort);
+  Serial.print("Local port: ");
+  Serial.println(Udp.localPort());
+  Serial.println("waiting for sync");
+  setSyncProvider(getNtpTime);
+  setSyncInterval(300);     //每300秒同步一次时间
+  isNTPConnected = true;
+  u8g2.sendBuffer();
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/all", all);
+  server.on("/select", select);
+  server.on("/handle", hhandle);
+  server.begin();
+  Serial.println("HTTP server started");
+
+}
+
+time_t prevDisplay = 0; // 当时钟已经显示
+
+void loop()
+{
+  if (timeStatus() != timeNotSet) {
+    if (now() != prevDisplay) { //时间改变时更新显示
+      prevDisplay = now();
+      oledClockDisplay();
+    }
+  }
+  alarm();
+  server.handleClient();
+  MDNS.update();
+}
+void initdisplay()
+{
+  u8g2.begin();
+  u8g2.enableUTF8Print();
+}
+
+void oledClockDisplay()
+{
+  int  hours, minutes, seconds;
+  hours = hour();
+  minutes = minute();
+  seconds = second();
+  Serial.printf(" %d:%d:%d \n",  hours, minutes, seconds);
+  u8g2.clearBuffer();
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.setCursor(0, 14);
+  if (isNTPConnected)
+    u8g2.print("Time");
+  else
+    u8g2.print("Failed!"); //如果上次对时失败，则会显示无网络
+  String currentTime = "";
+  if (hours < 10)
+    currentTime += 0;
+  currentTime += hours;
+  currentTime += ":";
+  if (minutes < 10)
+    currentTime += 0;
+  currentTime += minutes;
+  currentTime += ":";
+  if (seconds < 10)
+    currentTime += 0;
+  currentTime += seconds;
+  u8g2.setFont(u8g2_font_ncenB08_tr);
+  u8g2.setCursor(0, 24);
+  u8g2.print(currentTime);
+  u8g2.sendBuffer();
+}
+void alarm()
+{
+  int  hours, minutes, seconds;
+  hours = hour();
+  minutes = minute();
+  seconds = second();
+  for (int i = 0; i < 5; i++) {
+    if (hours == hhour[i] && minutes == mminute[i]) {
+      digitalWrite(0, HIGH);
+      u8g2.setFont(u8g2_font_ncenB08_tr);
+      u8g2.setCursor(0, 44);
+      u8g2.print(medicine[i]);
+      u8g2.sendBuffer();
+      u8g2.setFont(u8g2_font_ncenB08_tr);
+      u8g2.setCursor(0, 54);
+      u8g2.print(dosage[i]);
+      u8g2.sendBuffer();
+    }
+    else {
+      digitalWrite(0, LOW);
+    }
+  }
+}
+void eepromread(){
+  sum=0;
+    for(int j=0;j<10;j++)
+   for (int i=0;i<40;i++)
+  {
+    temp[0]=EEPROM.read(sum);
+   if(!strcmp(temp,tempp))
+   i=40;
+    else if(j<5)
+   medicine[j]+=temp[0];
+   else
+   dosage[j-5]+=temp[0];
+    sum++;
+  }
+  for(int i=0;i<10;i++)
+  {
+    if (i<5)
+    hhour[i]=EEPROM.read(sum);
+    else 
+    mminute[i-5]=EEPROM.read(sum);
+    sum++;
+  }
+}
+void eepromwrite(){
+  String test[10];
+   int a[10];
+   sum=0;
+   for (int i=0;i<10;i++)
+   {
+    if (i<5){
+      test[i]=medicine[i];
+      a[i]=hhour[i];
+    }
+    else{
+    test[i]=dosage[i-5];
+    a[i]=mminute[i-5];
+    }
+   }
+    for(int j=0;j<10;j++)
+ {
+  for (int i=0;i<test[j].length();i++)
+  {
+    EEPROM.write(sum,test[j][i]);
+    sum++;
+  }
+  EEPROM.write(sum,temp[1]);
+  sum++;
+}
+for (int i=0;i<10;i++)
+{
+  EEPROM.write(sum,a[i]);
+  sum++;
+}
+  EEPROM.commit();
+}
+
+/*-------- NTP 代码 ----------*/
+
+const int NTP_PACKET_SIZE = 48;     // NTP时间在消息的前48个字节里
+byte packetBuffer[NTP_PACKET_SIZE]; // 输入输出包的缓冲区
+
+time_t getNtpTime()
+{
+  IPAddress ntpServerIP; // NTP服务器的地址
+
+  while (Udp.parsePacket() > 0); // 丢弃以前接收的任何数据包
+  Serial.println("Transmit NTP Request");
+  // 从池中获取随机服务器
+  WiFi.hostByName(ntpServerName, ntpServerIP);
+  Serial.print(ntpServerName);
+  Serial.print(": ");
+  Serial.println(ntpServerIP);
+  sendNTPpacket(ntpServerIP);
+  uint32_t beginWait = millis();
+  while (millis() - beginWait < 1500) {
+    int size = Udp.parsePacket();
+    if (size >= NTP_PACKET_SIZE) {
+      Serial.println("Receive NTP Response");
+      Udp.read(packetBuffer, NTP_PACKET_SIZE); // 将数据包读取到缓冲区
+      unsigned long secsSince1900;
+      // 将从位置40开始的四个字节转换为长整型，只取前32位整数部分
+      secsSince1900 = (unsigned long)packetBuffer[40] << 24;
+      secsSince1900 |= (unsigned long)packetBuffer[41] << 16;
+      secsSince1900 |= (unsigned long)packetBuffer[42] << 8;
+      secsSince1900 |= (unsigned long)packetBuffer[43];
+      Serial.println(secsSince1900);
+      Serial.println(secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR);
+      return secsSince1900 - 2208988800UL + timeZone * SECS_PER_HOUR;
+    }
+  }
+  Serial.println("No NTP Response :-("); //无NTP响应
+  return 0;                              //如果未得到时间则返回0
+}
+
+// 向给定地址的时间服务器发送NTP请求
+void sendNTPpacket(IPAddress &address)
+{
+  memset(packetBuffer, 0, NTP_PACKET_SIZE);
+  packetBuffer[0] = 0b11100011; // LI, Version, Mode
+  packetBuffer[1] = 0;          // Stratum, or type of clock
+  packetBuffer[2] = 6;          // Polling Interval
+  packetBuffer[3] = 0xEC;       // Peer Clock Precision
+  // 8 bytes of zero for Root Delay & Root Dispersion
+  packetBuffer[12] = 49;
+  packetBuffer[13] = 0x4E;
+  packetBuffer[14] = 49;
+  packetBuffer[15] = 52;
+  Udp.beginPacket(address, 123); //NTP需要使用的UDP端口号为123
+  Udp.write(packetBuffer, NTP_PACKET_SIZE);
+  Udp.endPacket();
+}
