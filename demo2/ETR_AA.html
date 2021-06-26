@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ETR_AA for managing AA</title>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+</head>
+
+<body>
+    <!--导航-->
+    <nav class="navbar navbar-default">
+        <div class="container">
+            <!--小屏幕导航和按钮-->
+            <div class="navbar-header">
+                <button class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+                    <span class="icon-bar"></span>
+                    <!--一个span代表一条线，三个代表三行 -->
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <!-- <a href="index.html" class="navbar-brand">WYU Admin</a> -->
+                <p class="navbar-brand">ETR_AA by Gov</p>
+            </div>
+            <!--小屏幕导航和按钮-->
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav">
+                    <li class="active"><a href="ETR_AA.html"><span class="glyphicon glyphicon-home"></span>&nbsp;&nbsp;ETR_AA</a></li>
+                    <li><a href="ETR_CA.html"><span class="glyphicon glyphicon-user"></span>&nbsp;&nbsp;ETR_CA</a></li>
+                    <li><a href="ETR_STU.html"><span class="glyphicon glyphicon-user"></span>&nbsp;&nbsp;ETR_STU</a></li>
+                    <li><a href="STU_SELF.html"><span class="glyphicon glyphicon-user"></span>&nbsp;&nbsp;STU_SELF</a></li>
+                </ul>
+                <!-- <ul class="nav navbar-nav navbar-right">
+                    <li class="dropdown">
+                        <a id="dLabel" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Address
+                            <span class="caret"></span>
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="dLabel">
+                            <input type="text" id="contractaddr" placeholder="Please input your contract address" class="form-control" />
+                            <button class="btn btn-default" onclick="Initial()">complete</button>
+                            <li><a href=""><span class="glyphicon glyphicon-home"></span>&nbsp;&nbsp;前台首页</a></li>
+                            <li><a href=""><span class="glyphicon glyphicon-user"></span>&nbsp;&nbsp;个人主页</a></li>
+                            <li><a href=""><span class="glyphicon glyphicon-cog"></span>&nbsp;&nbsp;个人设置</a></li>
+                            <li><a href=""><span class="glyphicon glyphicon-credit-card"></span>&nbsp;&nbsp;账户中心</a></li>
+                            <li><a href=""><span class="glyphicon glyphicon-heart"></span>&nbsp;&nbsp;我的收藏</a></li>
+                        </ul>
+                    </li>
+                    <li><a href="#home"></a></li>
+                    <li><a href="#home"><span class="glyphicon glyphicon-off"></span>&nbsp;&nbsp;退出</a></li>
+                </ul> -->
+            </div>
+        </div>
+    </nav>
+    <!--导航-->
+    <div class="container">
+        <div class="row">
+            <div class="col-md-2">
+                <div class="list-group">
+                    <a href="ETR_AA.html" class="active list-group-item">AALIST</a>
+                    <a class="list-group-item" href="" role="button" data-toggle="modal" data-target="#myModal2">CONFIRM</a>
+                    <a class="list-group-item" href="" role="button" data-toggle="modal" data-target="#myModal3">TOBLACK</a>
+                    <a class="list-group-item" href="" role="button" data-toggle="modal" data-target="#myModal">ADD_AA</a>
+
+                </div>
+            </div>
+            <div class="col-md-10">
+                <div class="page-header">
+                    <h1>ETR_AA's owner:</h1>
+                    <p id="ownerofall">0x</p>
+                    <p id="contractofall">0x</p>
+                </div>
+                <ul class="nav nav-tabs">
+                    <li class="active"><a href="ETR_AA">AALIST</a></li>
+                    <li><a href="" role="button" data-toggle="modal" data-target="#myModal2" onclick="Zero2()">CONFIRM</a></li>
+                    <li><a href="" role="button" data-toggle="modal" data-target="#myModal3" onclick="Zero3()">TOBLACK</a></li>
+                    <li><a href="" role="button" data-toggle="modal" data-target="#myModal" onclick="Zero()">ADD_AA</a></li>
+                </ul>
+                <table class="table" id ="showtable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>AA name</th>
+                            <th>contract address</th>
+                            <th>credit</th>
+                        </tr>
+                    </thead>
+                    <tbody id="showpart">
+                    </tbody>
+                </table>
+                <!-- <nav aria-label="Page navigation" class="pull-right">
+                    <ul class="pagination">
+                        <li>
+                            <a href="#" aria-label="Previous">
+                                <span aria-hidden="true">&laquo;</span>
+                            </a>
+                        </li>
+                        <li class="active"><a href="#">1</a></li>
+                        <li><a href="#">2</a></li>
+                        <li><a href="#">3</a></li>
+                        <li><a href="#">4</a></li>
+                        <li><a href="#">5</a></li>
+                        <li>
+                            <a href="#" aria-label="Next">
+                                <span aria-hidden="true">&raquo;</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav> -->
+            </div>
+        </div>
+    </div>
+    <!-- Modal -->
+    <div class="modal fade" id="myModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">ADD_AA</h4>
+                </div>
+                <div class="modal-body">
+                    <form action="">
+                        <div class="form-group">
+                            <label for="addname">AA name</label>
+                            <input type="text" id="addname" class="form-control" placeholder="Please Input AA name" />
+                        </div>
+                        <div class="form-group">
+                            <label for="addAddr">Contract Address</label>
+                            <input type="text" id="addAddr" class="form-control" placeholder="Please Input AA's Contract Address" />
+                        </div>
+                        <div class="form-group">
+                            <label for="addAddr2">Confirm Address</label>
+                            <input type="text" id="addAddr2" class="form-control" placeholder="Please Input Address Again For Confirm" />
+                        </div>
+                        <div class="alert alert-info" role="alert">
+                            <p id="alert" ></p>
+                        </div>
+                  <!--       <div class="form-group">
+                            <label for="addmail">请输入邮箱</label>
+                            <input type="email" id="addemail" class="form-control" placeholder="请输入邮箱" />
+                        </div>
+                        <div class="form-group">
+                            <label for="addyonghuzu">选择用户组</label>
+                            <select id="addyonghuzu" class="form-control">
+                                <option value="限制会员">限制会员</option>
+                                <option value="新手上路">新手上路</option>
+                                <option value="注册会员">注册会员</option>
+                                <option value="中级会员">中级会员</option>
+                                <option value="高级会员">高级会员</option>
+                            </select>
+                        </div> -->
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                            <button type="submit" class="btn btn-primary" onclick="setAA()" >提交</button>
+                        </div>
+                    </form>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <!-- Modal2 -->
+    <div class="modal fade" id="myModal2" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">CONFIRM</h4>
+                </div>
+                <div class="modal-body">
+                    <form action="">
+                        <div class="form-group">
+                            <label for="confirmAA">Confirm AA</label>
+                            <input type="text" id="confirmAA" class="form-control" placeholder="Please Input ETR_CA's Contract Address" />
+                            <button type="button" class="btn btn-primary" onclick="ConfirmAA()">CONFIRM</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmSTU">Confirm STU</label>
+                            <input type="text" id="confirmSTU" class="form-control" placeholder="Please Input STU_SELF's Contract Address" />
+                            <button type="button" class="btn btn-primary" onclick="ConfirmSTU()">CONFIRM</button>
+                        </div>
+                        <div class="alert alert-info" role="alert">
+                            <p id="alert2" ></p>
+                        </div>
+                        
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Modal3 -->
+    <div class="modal fade" id="myModal3" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title" id="myModalLabel">SEARCH&CONFIRM</h4>
+                </div>
+                <div class="modal-body">
+                    <form action="">
+                        <div class="form-group">
+                            <label for="delateAA">Delate AA</label>
+                            <input type="text" id="delateAA" class="form-control" placeholder="Please Input ETR_CA's Address tobedelated" />
+                            <button type="button" class="btn btn-default" onclick="DelateAA()">DELATE</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="delateSTU">Delate STU</label>
+                            <input type="text" id="delateSTU" class="form-control" placeholder="Please Input STU_SELF's Contract Address" />
+                            <button type="button" class="btn btn-default" onclick="DelateSTU()">DELATE</button>
+                        </div>
+                        <div class="form-group">
+                            <label for="BlackList">ADD BlackList</label>
+                            <input type="text" id="BlackList" class="form-control" placeholder="Please Input ANNOYING FRIM Address" />
+                            <button type="button" class="btn btn-default" onclick="ADDBLACK()">ADD</button>
+                        </div>
+                        <div class="alert alert-info" role="alert">
+                            <p id="alert3" ></p>
+                        </div>
+                        
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--footer开始-->
+    <footer>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-12">
+                    <p>
+                        Copyright&nbsp;©&nbsp;2021-2021 &nbsp;&nbsp;www.yuanshen.site&nbsp;&nbsp;请mhy加强一下刻晴
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <!--footer结束-->
+    <script src="js/jquery-3.2.1.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.2.6/dist/web3.min.js"></script>
+    <script src="./ETR_AA.js"></script>
+    
+
+</body>
+
+</html>
